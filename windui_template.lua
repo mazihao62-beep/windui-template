@@ -1,5 +1,5 @@
 --[[
-    WindUI 通用脚本模板 v1.0
+    WindUI 通用脚本模板 v1.1
     基于: 机场安全透视 v11.0 UI 结构
     作者: b站英吉利超入_
     说明: 以后所有 WindUI 脚本都用这个模板
@@ -9,7 +9,7 @@
 -- 此模板包含 WindUI 脚本的完整标准结构：
 -- ✅ WindUI 加载 + Popup 确认弹窗
 -- ✅ 6 个标准 Tab: 主控面板 / 功能设置 / UI设置 / 信息统计 / 配置管理 / 关于
--- ✅ 粒子背景系统 (35个呼吸粒子)
+-- ✅ 粒子背景系统 (35个呼吸粒子) -> 修复: 范围约束+缓慢反弹+主题色适配
 -- ✅ 增强毛玻璃 (Acrylic + Transparent)
 -- ✅ 16种内置主题 (下拉选择器)
 -- ✅ 配置保存系统 (保存/加载/删除 + 下拉选择)
@@ -60,6 +60,42 @@ local TabElements = {}
 local ConfigName = "default"
 
 -- ===================== 粒子背景系统 =====================
+-- 主题色映射表（与WindUI内置16主题对应）
+local ThemeColors = {
+    Dark = Color3.fromRGB(100, 180, 255),
+    Light = Color3.fromRGB(80, 140, 200),
+    Rose = Color3.fromRGB(255, 120, 160),
+    Plant = Color3.fromRGB(100, 200, 120),
+    Ocean = Color3.fromRGB(80, 180, 230),
+    Sunset = Color3.fromRGB(255, 150, 80),
+    Midnight = Color3.fromRGB(120, 100, 220),
+    Forest = Color3.fromRGB(80, 170, 80),
+    Lavender = Color3.fromRGB(180, 130, 255),
+    Coral = Color3.fromRGB(255, 130, 100),
+    Mint = Color3.fromRGB(100, 220, 180),
+    Peanut = Color3.fromRGB(200, 170, 100),
+    Sky = Color3.fromRGB(130, 180, 255),
+    Blood = Color3.fromRGB(220, 80, 80),
+    Lemon = Color3.fromRGB(220, 200, 80),
+    Cyber = Color3.fromRGB(0, 220, 200),
+}
+
+local function getParticleColor()
+    local themeName = Settings.CurrentTheme or "Dark"
+    if ThemeColors[themeName] then
+        return ThemeColors[themeName]
+    end
+    -- 尝试从 WindUI 当前主题取主色
+    local primary = nil
+    pcall(function()
+        if WindUI and WindUI.Theme and WindUI.Theme.Primary then
+            primary = WindUI.Theme.Primary
+        end
+    end)
+    if primary then return primary end
+    return Color3.fromRGB(100, 180, 255) -- 默认蓝色
+end
+
 local function createParticles()
     if ParticleGui then
         pcall(function() ParticleGui:Destroy() end)
@@ -75,15 +111,21 @@ local function createParticles()
         ParticleGui.IgnoreGuiInset = true
         ParticleGui.Parent = CoreGui
 
-        local numParticles = 35
+        local numParticles = 25
         local particles = {}
+        local particleColor = getParticleColor()
 
         for i = 1, numParticles do
             local dot = Instance.new("Frame")
-            dot.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
-            dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
-            dot.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
-            dot.BackgroundTransparency = math.random(30, 70) / 100
+            local size = math.random(2, 4)
+            dot.Size = UDim2.new(0, size, 0, size)
+            -- 初始分布在窗口常见区域附近 (0.08~0.92)
+            dot.Position = UDim2.new(
+                0.08 + math.random() * 0.84, 0,
+                0.08 + math.random() * 0.84, 0
+            )
+            dot.BackgroundColor3 = particleColor
+            dot.BackgroundTransparency = 0.4 + math.random() * 0.4
             dot.BorderSizePixel = 0
             dot.Parent = ParticleGui
 
@@ -91,14 +133,17 @@ local function createParticles()
             c.CornerRadius = UDim.new(0, 10)
             c.Parent = dot
 
+            -- 极慢速度 + 随机方向
+            local angle = math.random() * 6.28
+            local speed = 0.0005 + math.random() * 0.0015
             table.insert(particles, {
                 Frame = dot,
-                SpeedX = (math.random() - 0.5) * 0.015,
-                SpeedY = (math.random() - 0.5) * 0.015,
-                DriftX = (math.random() - 0.5) * 0.002,
-                DriftY = (math.random() - 0.5) * 0.002,
+                Vx = math.cos(angle) * speed,
+                Vy = math.sin(angle) * speed,
                 Phase = math.random() * 6.28,
-                SizeBase = math.random(2, 5),
+                SizeBase = size,
+                MinBound = 0.06,
+                MaxBound = 0.94,
             })
         end
 
@@ -110,22 +155,54 @@ local function createParticles()
                 pcall(function()
                     for _, p in ipairs(particles) do
                         if not p.Frame or not p.Frame.Parent then continue end
-                        local x = p.Frame.Position.X.Scale + p.SpeedX + math.sin(time + p.Phase) * p.DriftX
-                        local y = p.Frame.Position.Y.Scale + p.SpeedY + math.cos(time + p.Phase) * p.DriftY
-                        if x > 1 then x = -0.05 end
-                        if x < -0.05 then x = 1 end
-                        if y > 1 then y = -0.05 end
-                        if y < -0.05 then y = 1 end
+
+                        local x = p.Frame.Position.X.Scale + p.Vx
+                        local y = p.Frame.Position.Y.Scale + p.Vy
+
+                        -- 边界反弹（不穿模、不瞬移）
+                        if x > p.MaxBound then
+                            x = p.MaxBound; p.Vx = -p.Vx
+                            p.Vx = p.Vx + (math.random() - 0.5) * 0.0002
+                        elseif x < p.MinBound then
+                            x = p.MinBound; p.Vx = -p.Vx
+                            p.Vx = p.Vx + (math.random() - 0.5) * 0.0002
+                        end
+                        if y > p.MaxBound then
+                            y = p.MaxBound; p.Vy = -p.Vy
+                            p.Vy = p.Vy + (math.random() - 0.5) * 0.0002
+                        elseif y < p.MinBound then
+                            y = p.MinBound; p.Vy = -p.Vy
+                            p.Vy = p.Vy + (math.random() - 0.5) * 0.0002
+                        end
+
                         p.Frame.Position = UDim2.new(x, 0, y, 0)
-                        local breathe = 0.5 + math.sin(time * 1.5 + p.Phase) * 0.3
+
+                        -- 呼吸效果（透明度变化）
+                        local breathe = 0.4 + math.sin(time * 0.8 + p.Phase) * 0.25
                         p.Frame.BackgroundTransparency = breathe
-                        local sizeBase = p.SizeBase
-                        p.Frame.Size = UDim2.new(0, sizeBase + math.sin(time + p.Phase) * 1.5, 0, sizeBase + math.sin(time + p.Phase) * 1.5)
+
+                        -- 大小微变化
+                        local sizeDelta = math.sin(time + p.Phase) * 0.8
+                        local s = math.max(1, p.SizeBase + sizeDelta)
+                        p.Frame.Size = UDim2.new(0, s, 0, s)
                     end
                 end)
                 task.wait(0.03)
             end
         end)
+    end)
+end
+
+local function updateParticleColor()
+    -- 切换主题时更新所有粒子颜色
+    local color = getParticleColor()
+    if not ParticleGui then return end
+    pcall(function()
+        for _, child in ipairs(ParticleGui:GetChildren()) do
+            if child:IsA("Frame") then
+                child.BackgroundColor3 = color
+            end
+        end
     end)
 end
 
@@ -162,7 +239,7 @@ if s and r then
 
     -- ===================== Popup 确认弹窗 =====================
     WindUI:Popup({
-        Title = "【你的脚本名】v1.0",
+        Title = "【你的脚本名】v1.1",
         Icon = "solar:info-square-bold",
         Content = "📋 功能1 - 说明1\n📋 功能2 - 说明2\n📋 功能3 - 说明3\n💾 配置保存 - 自动保存/读取设置\n🎨 主题系统 - 16种内置主题\n✨ 粒子背景 - 动态浮动粒子\n🌀 增强毛玻璃 - Acrylic+透明叠加\n\n⚠️ 加载后所有功能默认关闭，需手动开启",
         Buttons = {
@@ -350,7 +427,7 @@ if s and r then
         uiTab:Divider()
 
         -- Section: 主题系统
-        uiTab:Paragraph({Title="🎨 主题系统", Desc="16种内置主题，自由切换"})
+        uiTab:Paragraph({Title="🎨 主题系统", Desc="16种内置主题，切换时粒子颜色自动适配"})
         local allThemes = {}
         pcall(function() allThemes = WindUI:GetThemes() end)
         local themeNames = {}
@@ -368,11 +445,13 @@ if s and r then
                 if selected then
                     Settings.CurrentTheme = selected
                     pcall(function() WindUI:SetTheme(selected) end)
+                    -- 切换主题时同步更新粒子颜色
+                    updateParticleColor()
                 end
             end
         })
         uiTab:Divider()
-        uiTab:Paragraph({Title="💡 提示", Desc="粒子背景 + 毛玻璃 + 透明背景叠加效果最佳"})
+        uiTab:Paragraph({Title="💡 提示", Desc="粒子背景 + 毛玻璃 + 透明背景叠加效果最佳\n粒子仅在有内容的区域飘浮，不会飘出窗口外"})
 
         -- ===================== Tab 4: 信息统计 =====================
         local statsTab = win:Tab({Title="信息统计", Icon="solar:chart-bold"})
@@ -485,7 +564,7 @@ if s and r then
 
         -- ===================== Tab 6: 关于 =====================
         local aboutTab = win:Tab({Title="关于", Icon="solar:info-square-bold"})
-        aboutTab:Paragraph({Title="【你的脚本名】v1.0", Desc="功能简述"})
+        aboutTab:Paragraph({Title="【你的脚本名】v1.1", Desc="功能简述"})
         aboutTab:Divider()
         aboutTab:Paragraph({Title="👤 作者", Desc="b站英吉利超入_"})
         aboutTab:Divider()
@@ -558,7 +637,7 @@ if s and r then
         end
     end
 
-    print("[模板] v1.0 已加载 | 作者: b站英吉利超入_")
+    print("[模板] v1.1 已加载 | 作者: b站英吉利超入_")
 else
     -- WindUI 加载失败
     print("[模板] WindUI 加载失败")
