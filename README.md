@@ -33,9 +33,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/mazihao62-beep/windui
 | 功能 | 说明 |
 |------|------|
 | ✅ **Popup 确认弹窗** | 加载前弹出功能说明，确认后才启动 |
-| ✅ **粒子背景** | 35个呼吸粒子，可开关 |
+| ✅ **粒子背景 v1.1** | 🆕 范围约束（不飘出UI）+ 缓慢反弹（不瞬移）+ 主题色自动适配 |
 | ✅ **增强毛玻璃** | Acrylic + Transparent = 0.22 叠加 |
-| ✅ **16主题** | 下拉一键切换 Dark/Light/Rose/Plant... |
+| ✅ **16主题** | 下拉一键切换 Dark/Light/Rose/Plant... 粒子颜色同步变 |
 | ✅ **配置保存** | 所有 Flag 控件自动接入，自动加载 default |
 | ✅ **手机适配** | 悬浮按钮 + 拖拽 |
 | ✅ **快捷键监听** | 窗口/功能快捷键分离 |
@@ -91,4 +91,5 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/mazihao62-beep/windui
 
 | 版本 | 内容 |
 |------|------|
+| v1.1 | 🆕 粒子修复：范围约束+缓慢反弹+主题色自动适配 |
 | v1.0 | ✅ 初始发布 - 6个标准Tab + 粒子背景 + 毛玻璃 + 16主题 + 配置保存 |
