@@ -2,27 +2,9 @@
     WindUI 通用脚本模板 v5.2
     作者: b站英吉利超入_
     功能: 6Tab标准UI + 粒子背景 + 主题切换 + 配置保存 + OpenButton悬浮按钮
-    修复: 粒子ZIndex=100+找ScrollingFrame内容区+透明度降低
+    修复: 粒子独立ScreenGui+DisplayOrder，彻底稳定
     使用: 搜索"【你的功能】"替换; _G.CleanupTpl()
     注意: 修改disableFunc()以在窗口关闭时禁用你的功能
-    
-    ===== WindUI 文档链接 =====
-    Window: footagesus-windui.mintlify.app/components/window
-    Tab: footagesus-windui.mintlify.app/components/tab
-    Toggle: footagesus-windui.mintlify.app/components/toggle
-    Slider: footagesus-windui.mintlify.app/components/slider
-    Input: footagesus-windui.mintlify.app/components/input
-    Dropdown: footagesus-windui.mintlify.app/components/dropdown
-    Colorpicker: footagesus-windui.mintlify.app/components/colorpicker
-    Keybind: footagesus-windui.mintlify.app/components/keybind
-    Notification: footagesus-windui.mintlify.app/components/notification
-    Dialog: footagesus-windui.mintlify.app/components/dialog
-    Popup: footagesus-windui.mintlify.app/components/popup
-    Tooltip: footagesus-windui.mintlify.app/components/tooltip
-    Config Saving: footagesus-windui.mintlify.app/guides/config-saving
-    Icons: footagesus-windui.mintlify.app/guides/icons
-    Acrylic: footagesus-windui.mintlify.app/guides/acrylic
-    Localization: footagesus-windui.mintlify.app/guides/localization
     
     ===== 易错点速查 =====
     1. Keybind回调返回字符串(如"G")，不是Enum.KeyCode
@@ -43,7 +25,7 @@ local TAG="TplESP_"
 local function clean()
     local c=0;pcall(function()
         for _,v in ipairs(CG:GetDescendants())do local ok,a=pcall(function()return v:GetAttribute(TAG)end);if ok and a then pcall(function()v:Destroy()end);c=c+1 end end
-        local wc=0;for _,g in ipairs(CG:GetChildren())do if g:IsA("ScreenGui")then local n=g.Name;if n:find("WindUI")then wc=wc+1;if wc>1 then pcall(function()g:Destroy()end);c=c+1 end elseif n:find("Tpl")then pcall(function()g:Destroy()end);c=c+1 end end end
+        local wc=0;for _,g in ipairs(CG:GetChildren())do if g:IsA("ScreenGui")then local n=g.Name;if n:find("WindUI")then wc=wc+1;if wc>1 then pcall(function()g:Destroy()end);c=c+1 end elseif n:find("Tpl")or n:find("ESP_Particles")then pcall(function()g:Destroy()end);c=c+1 end end end
     end);if c>0 then print("[清理]"..c.."个")end
 end
 clean()
@@ -69,40 +51,28 @@ local function gtc(n)
     return Color3.fromRGB(80,170,255)
 end
 
-local WN=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local WF=nil;local PH=nil
-local WI=nil
+local WN=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local PH=nil
 
 -- 【重要】修改此函数以在窗口关闭时禁用你的功能
 local function disableFunc()
 end
 
-local function findCF()
-    for _,g in ipairs(CG:GetChildren())do
-        if g:IsA("ScreenGui")and g.Name:find("WindUI")then
-            for _,sf in ipairs(g:GetDescendants())do
-                if sf:IsA("ScrollingFrame")and sf.AbsoluteSize.X>400 and sf.AbsoluteSize.Y>200 then return sf end
-            end
-            local bs=0;local best=nil
-            for _,f in ipairs(g:GetDescendants())do if f:IsA("Frame")and f.AbsoluteSize.X>bs then bs=f.AbsoluteSize.X;best=f end end
-            return best
-        end
-    end
-    return nil
-end
-
+-- 粒子: 独立ScreenGui + DisplayOrder 999999
 local function cp()
-    if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={};PR=false
-    if PH then pcall(function()PH:Disconnect()end);PH=nil end
+    if PC then pcall(function()local p=PC.Parent;if p then p:Destroy()end end);PC=nil end;PS={};PR=false
     if not S.Particles then return end
-    task.wait(0.8);local wf=findCF()
-    if not wf then task.wait(1);wf=findCF()end
-    if not wf then return end
+    task.wait(0.5)
     pcall(function()
-        PC=Instance.new("Frame");PC.Size=UDim2.new(1,0,1,0);PC.Position=UDim2.new(0,0,0,0);PC.BackgroundTransparency=1;PC.BorderSizePixel=0;PC.ClipsDescendants=true;PC.ZIndex=100;PC.Parent=wf;tg(PC)
-        local col=gtc(S.CurrentTheme);local w=wf.AbsoluteSize.X;local h=wf.AbsoluteSize.Y
+        local sg=Instance.new("ScreenGui");sg.Name="Tpl_Particles";sg.ResetOnSpawn=false
+        sg.DisplayOrder=999999;sg.IgnoreGuiInset=true;sg.Parent=CG
+        PC=Instance.new("Frame");PC.Size=UDim2.new(1,0,1,0);PC.BackgroundTransparency=1;PC.BorderSizePixel=0;PC.Active=false;PC.Parent=sg
+        local col=gtc(S.CurrentTheme);local vp=WS.CurrentCamera.ViewportSize;local w=vp.X;local h=vp.Y
+        if w<=0 or h<=0 then w=1280;h=720 end
+        local mx,my=w*0.25,h*0.1;local MW,MH=w*0.75,h*0.85
         for i=1,50 do
-            local d=Instance.new("Frame");local sz=math.random(5,10);d.Size=UDim2.new(0,sz,0,sz);d.Position=UDim2.fromOffset(math.random(10,math.max(20,w-10)),math.random(10,math.max(20,h-10)))
-            d.BackgroundColor3=col;d.BackgroundTransparency=0.2+math.random()*0.4;d.BorderSizePixel=0;d.ZIndex=100;d.Parent=PC;tg(d)
+            local d=Instance.new("Frame");local sz=math.random(5,10);d.Size=UDim2.new(0,sz,0,sz)
+            d.Position=UDim2.fromOffset(math.random(mx,MW),math.random(my,MH))
+            d.BackgroundColor3=col;d.BackgroundTransparency=0.3+math.random()*0.5;d.BorderSizePixel=0;d.Parent=PC
             Instance.new("UICorner",d).CornerRadius=UDim.new(0,10)
             local a=math.random()*6.28;local sp=0.08+math.random()*0.2
             table.insert(PS,{F=d,Vx=math.cos(a)*sp,Vy=math.sin(a)*sp,Ph=math.random()*6.28,Sz=sz})
@@ -110,8 +80,7 @@ local function cp()
         PR=true
         task.spawn(function()
             local t=0
-            while PR and PC and PC.Parent do
-                t=t+0.03
+            while PR and PC do t=t+0.03
                 pcall(function()
                     local cw=PC.AbsoluteSize.X;local ch=PC.AbsoluteSize.Y
                     if cw<=0 or ch<=0 then return end
@@ -120,8 +89,8 @@ local function cp()
                             local x=p.F.Position.X.Offset+p.Vx;local y=p.F.Position.Y.Offset+p.Vy;local sz=p.F.AbsoluteSize.X
                             if x+sz>=cw then x=cw-sz;p.Vx=-p.Vx*0.95 elseif x<0 then x=0;p.Vx=-p.Vx*0.95 end
                             if y+sz>=ch then y=ch-sz;p.Vy=-p.Vy*0.95 elseif y<0 then y=0;p.Vy=-p.Vy*0.95 end
-                            p.F.Position=UDim2.fromOffset(x,y);p.F.BackgroundTransparency=0.2+math.sin(t*0.8+p.Ph)*0.3
-                            local bs=math.max(2,p.Sz+math.sin(t+p.Ph)*1);p.F.Size=UDim2.new(0,bs,0,bs)
+                            p.F.Position=UDim2.fromOffset(x,y);p.F.BackgroundTransparency=0.3+math.sin(t*0.8+p.Ph)*0.4
+                            local bs=math.max(2,p.Sz+math.sin(t+p.Ph)*1.5);p.F.Size=UDim2.new(0,bs,0,bs)
                         end
                     end
                 end)
@@ -137,8 +106,7 @@ local function upc()
 end
 
 local function dp2()
-    PR=false;if PH then pcall(function()PH:Disconnect()end);PH=nil end
-    if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={}
+    PR=false;if PC then pcall(function()local p=PC.Parent;if p then p:Destroy()end end);PC=nil end;PS={}
 end
 
 local function cw()
@@ -152,7 +120,7 @@ local function cw()
             Color=ColorSequence.new(Color3.fromRGB(0,255,100),Color3.fromRGB(0,200,255)),
             CornerRadius=UDim.new(1,0),StrokeThickness=3},
         OnClose=function()disableFunc();dp2()end,
-        OnOpen=function()if S.Particles then task.spawn(function()task.wait(0.8);cp()end)end end
+        OnOpen=function()if S.Particles then task.spawn(function()task.wait(0.5);cp()end)end end
     })end)
     if not ok2 or not w then return end
     WN=w
@@ -180,11 +148,8 @@ local function cw()
     CT.TD=ut:Dropdown({Flag="TD",Title="选择主题",Values=tn,Value="Dark",Callback=function(sl)if sl then S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl);upc()end end})
     
     local st=WN:Tab({Title="信息统计",Icon="solar:chart-bold"})
-    TE.GP=st:Paragraph({Title="📊 统计项 1: 0"})
-    TE.BP=st:Paragraph({Title="📊 统计项 2: 0"})
-    TE.SP=st:Paragraph({Title="📊 统计项 3: 0"})
-    st:Divider()
-    TE.SI=st:Input({Title="状态",Value="等待中...",Locked=true})
+    TE.GP=st:Paragraph({Title="📊 统计项 1: 0"});TE.BP=st:Paragraph({Title="📊 统计项 2: 0"});TE.SP=st:Paragraph({Title="📊 统计项 3: 0"})
+    st:Divider();TE.SI=st:Input({Title="状态",Value="等待中...",Locked=true})
     
     local ct=WN:Tab({Title="配置管理",Icon="solar:diskette-bold"})
     ct:Paragraph({Title="💾 配置 (保存/加载/删除)"})
@@ -198,7 +163,7 @@ local function cw()
     task.spawn(function()task.wait(1);pcall(function()if CM then CM:CreateConfig("default",true)end end);task.spawn(cp)end)
     
     local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-    at:Paragraph({Title="WindUI模板 v5.2",Desc="粒子Z100+ScrollingFrame+更低透明度"})
+    at:Paragraph({Title="WindUI模板 v5.2",Desc="独立ScreenGui+DisplayOrder粒子"})
     at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
     at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击悬浮按钮"or"PC: RightShift打开菜单"})
     at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
@@ -206,7 +171,7 @@ local function cw()
     print("[v5.2] 已加载")
 end
 
-local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
+local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
     WI:Popup({Title="WindUI模板 v5.2",Icon="solar:info-square-bold",
@@ -217,7 +182,6 @@ if ok and rv then
                 pcall(function()WI:Notify({Title="✅ 已加载",Content="按RightShift打开菜单",Duration=4,Icon="solar:bell-bold"})end)
                 task.spawn(cw)
             end,Variant="Primary"}}})
-    
     while not PP do task.wait(0.5)end
 else
     print("[v5.2] WindUI加载失败")
