@@ -1,9 +1,10 @@
 --[[
-    WindUI 通用脚本模板 v4.3
+    WindUI 通用脚本模板 v4.4
     作者: b站英吉利超入_
     功能: 6Tab标准UI + 粒子背景 + 主题切换 + 配置保存 + 手机适配
-    修复: 悬浮按钮直接切换/WindUI URL/粒子ZIndex/眼图标中文/IM变量
+    修复: OnClose调用disableFunc/悬浮按钮直接切换
     使用: 搜索"【你的功能】"替换;_G.CleanupTpl()
+    注意: 修改disableFunc()以在窗口关闭时禁用你的功能
 ]]
 local Players=game:GetService("Players");local UIS=game:GetService("UserInputService");local WS=game:GetService("Workspace");local CG=game:GetService("CoreGui")
 local IM=UIS.TouchEnabled and not UIS.KeyboardEnabled;if not IM then pcall(function()IM=UIS.TouchEnabled and not UIS.MouseEnabled end)end
@@ -28,11 +29,18 @@ local function gtc(n)
     if l:find("dark")or l:find("night")then return Color3.fromRGB(80,170,255)end;if l:find("light")then return Color3.fromRGB(60,130,210)end;if l:find("rose")or l:find("pink")then return Color3.fromRGB(255,130,170)end;if l:find("plant")or l:find("green")or l:find("forest")or l:find("mint")then return Color3.fromRGB(70,210,130)end;if l:find("ocean")or l:find("blue")or l:find("sky")then return Color3.fromRGB(60,190,240)end;if l:find("sunset")or l:find("orange")or l:find("coral")then return Color3.fromRGB(255,160,70)end;if l:find("midnight")or l:find("purple")or l:find("lavender")then return Color3.fromRGB(130,100,240)end;if l:find("blood")or l:find("red")then return Color3.fromRGB(230,90,80)end;if l:find("lemon")or l:find("yellow")then return Color3.fromRGB(230,210,70)end;return Color3.fromRGB(80,170,255)
 end
 local WN=nil;local FB=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local WF=nil;local PH=nil
+-- 【重要】修改此函数以在窗口关闭时禁用你的功能
+local function disableFunc()
+    -- 示例: 
+    -- Settings.Enabled=false
+    -- if CT.MyToggle then CT.MyToggle:Set(false) end
+    -- for _,o in pairs(ESPObjects) do if o.Highlight then o.Highlight.Enabled=false end end
+end
 local function mt()
     if not WN then return end
     WN.Visible=not WN.Visible
+    if not WN.Visible then disableFunc() end
 end
-local function disableFunc()end
 local function fw2()WF=nil;pcall(function()for _,g in ipairs(CG:GetChildren())do if g:IsA("ScreenGui")and g.Name:find("WindUI")then local bs=0;local b=nil;for _,f in ipairs(g:GetChildren())do if f:IsA("Frame")and f.AbsoluteSize.X>bs then bs=f.AbsoluteSize.X;b=f end end;if b then WF=b end;return end end end);return WF end
 local function cp()
     if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={};PR=false;if PH then pcall(function()PH:Disconnect()end);PH=nil end;if not S.Particles then return end;fw2()
@@ -67,14 +75,14 @@ cfb()
 local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
-    WI:Popup({Title="WindUI模板 v4.3",Icon="solar:info-square-bold",Content="✨ 6Tab标准UI+粒子+主题+配置保存\n窗口关闭时自动禁用功能",
+    WI:Popup({Title="WindUI模板 v4.4",Icon="solar:info-square-bold",Content="✨ 6Tab标准UI+粒子+主题+配置保存\n修改disableFunc()以在窗口关闭时禁用功能",
         Buttons={{Title="取消",Callback=function()end,Variant="Tertiary"},{Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()PP=true;pcall(function()WI:Notify({Title="✅ 已加载",Content="按RightShift打开菜单",Duration=4,Icon="solar:bell-bold"})end);task.spawn(function()cw()end)end,Variant="Primary"}}})
     task.spawn(function()while not PP do task.wait(0.5)end;task.wait(0.5);bu()end)
     function cw()
         if WN then return end;local ok2,w=pcall(function()return WI:CreateWindow({Title="WindUI模板",Author="b站英吉利超入_",Icon="solar:code-bold",Size=UDim2.fromOffset(750,520),ToggleKey=Enum.KeyCode.RightShift,Folder="windui-template",Acrylic=true,Transparent=true,Resizable=false,SideBarWidth=180,ScrollBarEnabled=true,HideSearchBar=true,
             OnClose=function()disableFunc();dp2()end,OnOpen=function()if S.Particles then task.spawn(cp)end end})end)
         if not ok2 or not w then return end;WN=w;
-        task.spawn(function()local wv=nil;while WN do task.wait(0.5);pcall(function()if WN.Visible~=nil then if wv==nil then wv=WN.Visible end;if wv~=WN.Visible then if WN.Visible then if S.Particles then task.spawn(cp)end else dp2()end;wv=WN.Visible end end end)end end)
+        task.spawn(function()local wv=nil;while WN do task.wait(0.5);pcall(function()if WN.Visible~=nil then if wv==nil then wv=WN.Visible end;if wv~=WN.Visible then if WN.Visible then if S.Particles then task.spawn(cp)end else disableFunc();dp2()end;wv=WN.Visible end end end)end end)
         local mt=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
         mt:Paragraph({Title="👁 【你的功能】"})
         mt:Divider();mt:Paragraph({Title="💡 Toggle带Flag自动接入配置保存"})
@@ -101,13 +109,13 @@ if ok and rv then
         ct:Button({Title="🗑️ 删除",Icon="solar:trash-bin-trash-bold",Justify="Center",Color=Color3.fromHex("#ff3040"),Callback=function()if not CM then return end;pcall(function()local c=CM:Config(CF);if c and c:Delete()then WI:Notify({Title="🗑️ 已删除",Content="配置 '"..CF.."'",Duration=3,Icon="solar:trash-bin-trash-bold"});ACD:Refresh(CM:AllConfigs())end end)end})
         task.spawn(function()task.wait(1);pcall(function()if CM then local c=CM:CreateConfig("default",true)end end);task.spawn(cp)end)
         local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-        at:Paragraph({Title="WindUI模板 v4.3",Desc="6Tab+粒子+主题+配置+OnClose自动禁用"})
+        at:Paragraph({Title="WindUI模板 v4.4",Desc="6Tab+粒子+主题+配置+OnClose+悬浮按钮"})
         at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
         at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击悬浮按钮"or"PC: RightShift打开菜单"})
         at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
     end
-    print("[v4.3] 已加载")
+    print("[v4.4] 已加载")
 else
-    print("[v4.3] WindUI加载失败")
+    print("[v4.4] WindUI加载失败")
     local msg=Instance.new("Message");msg.Text="⚠️WindUI加载失败";msg.Parent=WS;task.delay(3,function()msg:Destroy()end)
 end
