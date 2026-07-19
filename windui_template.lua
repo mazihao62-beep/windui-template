@@ -1,8 +1,8 @@
 --[[
-    WindUI 通用脚本模板 v5.1
+    WindUI 通用脚本模板 v5.2
     作者: b站英吉利超入_
     功能: 6Tab标准UI + 粒子背景 + 主题切换 + 配置保存 + OpenButton悬浮按钮
-    修复: cw提前定义/AT-TT分离/WindUI重复清理
+    修复: 粒子ZIndex=100+找ScrollingFrame内容区+透明度降低
     使用: 搜索"【你的功能】"替换; _G.CleanupTpl()
     注意: 修改disableFunc()以在窗口关闭时禁用你的功能
     
@@ -70,41 +70,39 @@ local function gtc(n)
 end
 
 local WN=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local WF=nil;local PH=nil
+local WI=nil
 
 -- 【重要】修改此函数以在窗口关闭时禁用你的功能
 local function disableFunc()
-    -- 示例: 
-    -- Settings.Enabled=false
-    -- if CT.MyToggle then CT.MyToggle:Set(false) end
-    -- for _,o in pairs(ESPObjects) do if o.Highlight then o.Highlight.Enabled=false end end
 end
 
-local function fw2()
-    WF=nil
-    pcall(function()
-        for _,g in ipairs(CG:GetChildren())do
-            if g:IsA("ScreenGui")and g.Name:find("WindUI")then
-                local bs=0;local b=nil
-                for _,f in ipairs(g:GetChildren())do if f:IsA("Frame")and f.AbsoluteSize.X>bs then bs=f.AbsoluteSize.X;b=f end end
-                if b then WF=b end;return
+local function findCF()
+    for _,g in ipairs(CG:GetChildren())do
+        if g:IsA("ScreenGui")and g.Name:find("WindUI")then
+            for _,sf in ipairs(g:GetDescendants())do
+                if sf:IsA("ScrollingFrame")and sf.AbsoluteSize.X>400 and sf.AbsoluteSize.Y>200 then return sf end
             end
+            local bs=0;local best=nil
+            for _,f in ipairs(g:GetDescendants())do if f:IsA("Frame")and f.AbsoluteSize.X>bs then bs=f.AbsoluteSize.X;best=f end end
+            return best
         end
-    end)
-    return WF
+    end
+    return nil
 end
 
 local function cp()
     if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={};PR=false
     if PH then pcall(function()PH:Disconnect()end);PH=nil end
     if not S.Particles then return end
-    task.wait(0.5);fw2()
-    if not WF then task.spawn(function()task.wait(1);fw2();if WF then cp()end end);return end
+    task.wait(0.8);local wf=findCF()
+    if not wf then task.wait(1);wf=findCF()end
+    if not wf then return end
     pcall(function()
-        PC=Instance.new("Frame");PC.Size=UDim2.new(1,0,1,0);PC.Position=UDim2.new(0,0,0,0);PC.BackgroundTransparency=1;PC.BorderSizePixel=0;PC.ClipsDescendants=true;PC.ZIndex=5;PC.Parent=WF;tg(PC)
-        local col=gtc(S.CurrentTheme);local w=WF.AbsoluteSize.X;local h=WF.AbsoluteSize.Y
+        PC=Instance.new("Frame");PC.Size=UDim2.new(1,0,1,0);PC.Position=UDim2.new(0,0,0,0);PC.BackgroundTransparency=1;PC.BorderSizePixel=0;PC.ClipsDescendants=true;PC.ZIndex=100;PC.Parent=wf;tg(PC)
+        local col=gtc(S.CurrentTheme);local w=wf.AbsoluteSize.X;local h=wf.AbsoluteSize.Y
         for i=1,50 do
-            local d=Instance.new("Frame");local sz=math.random(4,8);d.Size=UDim2.new(0,sz,0,sz);d.Position=UDim2.fromOffset(math.random(10,math.max(20,w-10)),math.random(10,math.max(20,h-10)))
-            d.BackgroundColor3=col;d.BackgroundTransparency=0.4+math.random()*0.4;d.BorderSizePixel=0;d.ZIndex=5;d.Parent=PC;tg(d)
+            local d=Instance.new("Frame");local sz=math.random(5,10);d.Size=UDim2.new(0,sz,0,sz);d.Position=UDim2.fromOffset(math.random(10,math.max(20,w-10)),math.random(10,math.max(20,h-10)))
+            d.BackgroundColor3=col;d.BackgroundTransparency=0.2+math.random()*0.4;d.BorderSizePixel=0;d.ZIndex=100;d.Parent=PC;tg(d)
             Instance.new("UICorner",d).CornerRadius=UDim.new(0,10)
             local a=math.random()*6.28;local sp=0.08+math.random()*0.2
             table.insert(PS,{F=d,Vx=math.cos(a)*sp,Vy=math.sin(a)*sp,Ph=math.random()*6.28,Sz=sz})
@@ -122,8 +120,8 @@ local function cp()
                             local x=p.F.Position.X.Offset+p.Vx;local y=p.F.Position.Y.Offset+p.Vy;local sz=p.F.AbsoluteSize.X
                             if x+sz>=cw then x=cw-sz;p.Vx=-p.Vx*0.95 elseif x<0 then x=0;p.Vx=-p.Vx*0.95 end
                             if y+sz>=ch then y=ch-sz;p.Vy=-p.Vy*0.95 elseif y<0 then y=0;p.Vy=-p.Vy*0.95 end
-                            p.F.Position=UDim2.fromOffset(x,y);p.F.BackgroundTransparency=0.4+math.sin(t*0.8+p.Ph)*0.25
-                            local bs=math.max(1,p.Sz+math.sin(t+p.Ph)*0.8);p.F.Size=UDim2.new(0,bs,0,bs)
+                            p.F.Position=UDim2.fromOffset(x,y);p.F.BackgroundTransparency=0.2+math.sin(t*0.8+p.Ph)*0.3
+                            local bs=math.max(2,p.Sz+math.sin(t+p.Ph)*1);p.F.Size=UDim2.new(0,bs,0,bs)
                         end
                     end
                 end)
@@ -143,7 +141,6 @@ local function dp2()
     if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={}
 end
 
--- cw 提前定义（修复 race condition）
 local function cw()
     if WN then return end
     local ok2,w=pcall(function()return WI:CreateWindow({
@@ -160,16 +157,13 @@ local function cw()
     if not ok2 or not w then return end
     WN=w
     
-    -- 主控面板
     local mt=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
     mt:Paragraph({Title="👁 【你的功能】"})
     mt:Paragraph({Title="💡 Toggle/Slider/Input/Dropdown 都支持Flag自动保存"})
     
-    -- 功能设置
     local ft=WN:Tab({Title="功能设置",Icon="solar:settings-bold"})
     ft:Paragraph({Title="🔑 快捷键 (无默认值,需自行绑定)"})
     
-    -- UI设置
     local ut=WN:Tab({Title="UI设置",Icon="solar:monitor-bold"})
     ut:Paragraph({Title="⚙️ 界面"})
     CT.WK=ut:Keybind({Flag="WinKB",Title="窗口开关",Value="RightShift",Callback=function(k)KB.WK=k;if WN then pcall(function()WN:SetToggleKey(Enum.KeyCode[k])end)end end})
@@ -185,7 +179,6 @@ local function cw()
     local allT={};pcall(function()allT=WI:GetThemes()end);local tn={};for n,_ in pairs(allT)do table.insert(tn,n)end;table.sort(tn)
     CT.TD=ut:Dropdown({Flag="TD",Title="选择主题",Values=tn,Value="Dark",Callback=function(sl)if sl then S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl);upc()end end})
     
-    -- 信息统计
     local st=WN:Tab({Title="信息统计",Icon="solar:chart-bold"})
     TE.GP=st:Paragraph({Title="📊 统计项 1: 0"})
     TE.BP=st:Paragraph({Title="📊 统计项 2: 0"})
@@ -193,7 +186,6 @@ local function cw()
     st:Divider()
     TE.SI=st:Input({Title="状态",Value="等待中...",Locked=true})
     
-    -- 配置管理
     local ct=WN:Tab({Title="配置管理",Icon="solar:diskette-bold"})
     ct:Paragraph({Title="💾 配置 (保存/加载/删除)"})
     local cni=ct:Input({Flag="CN",Title="配置名称",Value="default",Icon="solar:file-text-bold",Callback=function(v)CF=v end});ct:Space()
@@ -205,20 +197,19 @@ local function cw()
     ct:Button({Title="🗑️ 删除",Icon="solar:trash-bin-trash-bold",Justify="Center",Color=Color3.fromHex("#ff3040"),Callback=function()if not CM then return end;pcall(function()local c=CM:Config(CF);if c and c:Delete()then WI:Notify({Title="🗑️ 已删除",Content="配置 '"..CF.."'",Duration=3,Icon="solar:trash-bin-trash-bold"});ACD:Refresh(CM:AllConfigs())end end)end})
     task.spawn(function()task.wait(1);pcall(function()if CM then CM:CreateConfig("default",true)end end);task.spawn(cp)end)
     
-    -- 关于
     local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-    at:Paragraph({Title="WindUI模板 v5.1",Desc="cw提前定义/AT-TT分离/OnlyMobile"})
+    at:Paragraph({Title="WindUI模板 v5.2",Desc="粒子Z100+ScrollingFrame+更低透明度"})
     at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
     at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击悬浮按钮"or"PC: RightShift打开菜单"})
     at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
     
-    print("[v5.1] 已加载")
+    print("[v5.2] 已加载")
 end
 
-local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
+local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
-    WI:Popup({Title="WindUI模板 v5.1",Icon="solar:info-square-bold",
+    WI:Popup({Title="WindUI模板 v5.2",Icon="solar:info-square-bold",
         Content="✨ 6Tab标准UI+粒子+主题+配置保存\n🔘 WindUI内置OpenButton悬浮按钮\n修改disableFunc()以在窗口关闭时禁用功能",
         Buttons={{Title="取消",Callback=function()end,Variant="Tertiary"},
             {Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()
@@ -229,6 +220,6 @@ if ok and rv then
     
     while not PP do task.wait(0.5)end
 else
-    print("[v5.1] WindUI加载失败")
+    print("[v5.2] WindUI加载失败")
     local msg=Instance.new("Message");msg.Text="⚠️ WindUI加载失败";msg.Parent=WS;task.delay(3,function()msg:Destroy()end)
 end
