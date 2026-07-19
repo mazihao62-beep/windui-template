@@ -1,10 +1,17 @@
 --[[
-    WindUI 通用脚本模板 v3.5
+    WindUI 通用脚本模板 v3.6
     作者: b站英吉利超入_
-    v3.5 同步修复3个UI Bug:
-    1. 粒子: 直接放在WindUI窗口Frame内
-    2. 透明: 配合Acrylic一起切换
-    3. 滚动条: ScrollBarThickness=0
+    功能: 6Tab标准UI + 粒子背景 + 主题切换 + 配置保存 + 手机适配
+    修复: 粒子窗口内/透明滚动条/悬浮按钮协程无限重试
+    
+    📦 ====== 使用说明 ======
+    1. 复制本文件到你的新脚本
+    2. 搜索 "【你的功能】" 替换为实际控件
+    3. 所有带 Flag 的控件自动接入配置保存系统
+    4. 加载后默认功能关闭，需手动开启
+    5. 快捷键: 去"功能设置"Tab自行绑定
+    6. 清理残留: _G.CleanupTpl()
+    =======================
 ]]
 local Players=game:GetService("Players");local UIS=game:GetService("UserInputService");local WS=game:GetService("Workspace");local CG=game:GetService("CoreGui");local VIM=game:GetService("VirtualInputManager");local RS=game:GetService("RunService")
 local IM=UIS.TouchEnabled and not UIS.KeyboardEnabled;if not IM then pcall(function()IM=UIS.TouchEnabled and not UIS.MouseEnabled end)end
@@ -29,8 +36,9 @@ local function gtc(n)
     if l:find("dark")or l:find("night")then return Color3.fromRGB(80,170,255)end;if l:find("light")then return Color3.fromRGB(60,130,210)end;if l:find("rose")or l:find("pink")then return Color3.fromRGB(255,130,170)end;if l:find("plant")or l:find("green")or l:find("forest")or l:find("mint")then return Color3.fromRGB(70,210,130)end;if l:find("ocean")or l:find("blue")or l:find("sky")then return Color3.fromRGB(60,190,240)end;if l:find("sunset")or l:find("orange")or l:find("coral")then return Color3.fromRGB(255,160,70)end;if l:find("midnight")or l:find("purple")or l:find("lavender")then return Color3.fromRGB(130,100,240)end;if l:find("blood")or l:find("red")then return Color3.fromRGB(230,90,80)end;if l:find("lemon")or l:find("yellow")then return Color3.fromRGB(230,210,70)end;return n2c(n)
 end
 local WN=nil;local FB=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local WF=nil;local PH=nil
-local function mt()local tries=0;while not WN and tries<20 do task.wait(0.1);tries=tries+1 end;if WN then pcall(function()VIM:SendKeyEvent(true,Enum.KeyCode.RightShift,false,game);task.wait(0.05);VIM:SendKeyEvent(false,Enum.KeyCode.RightShift,false,game)end)end end
--- 粒子(窗口内)
+-- 悬浮按钮: 协程无限重试 (确保无论何时点击都能打开窗口)
+local function mt()task.spawn(function()while not WN do task.wait(0.1)end;pcall(function()VIM:SendKeyEvent(true,Enum.KeyCode.RightShift,false,game);task.wait(0.05);VIM:SendKeyEvent(false,Enum.KeyCode.RightShift,false,game)end)end)end
+-- 粒子: 直接放在WindUI窗口Frame内 (自动裁剪+跟随)
 local function fw2()WF=nil;pcall(function()for _,g in ipairs(CG:GetChildren())do if g:IsA("ScreenGui")and g.Name:find("WindUI")then local bs=0;local b=nil;for _,f in ipairs(g:GetChildren())do if f:IsA("Frame")and f.AbsoluteSize.X>bs then bs=f.AbsoluteSize.X;b=f end end;if b then WF=b end;return end end end);return WF end
 local function cp()
     if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={};PR=false;if PH then pcall(function()PH:Disconnect()end);PH=nil end;if not S.Particles then return end;fw2()
@@ -45,7 +53,7 @@ local function cp()
 end
 local function upc()local c=gtc(S.CurrentTheme);if not c or #PS==0 then return end;pcall(function()for _,p in ipairs(PS)do if p.F and p.F.Parent then p.F.BackgroundColor3=c end end end)end
 local function dp2()PR=false;if PH then pcall(function()PH:Disconnect()end);PH=nil end;if PC then pcall(function()PC:Destroy()end);PC=nil end;PS={}end
--- ScrollBarThickness=0(防双滚动条)
+-- 隐藏原生滚动条 (WindUI自带自定义滚动条)
 local function bu()pcall(function()for _,s in ipairs(CG:GetDescendants())do if s:IsA("ScrollingFrame")then s.ScrollBarThickness=0 end end end)end
 task.spawn(function()while true do task.wait(3);bu()end end)
 
@@ -67,7 +75,7 @@ cfb()
 local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
-    WI:Popup({Title="WindUI模板 v3.5",Icon="solar:info-square-bold",Content="✨ 粒子+透明+滚动条全部修复",
+    WI:Popup({Title="WindUI模板 v3.6",Icon="solar:info-square-bold",Content="✨ 6Tab标准UI+粒子+主题+配置保存",
         Buttons={{Title="取消",Callback=function()end,Variant="Tertiary"},{Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()PP=true;pcall(function()WI:Notify({Title="✅ 已加载",Content="按RightShift打开菜单",Duration=4,Icon="solar:bell-bold"})end);task.spawn(function()cw()end)end,Variant="Primary"}}})
     task.spawn(function()while not PP do task.wait(0.5)end;task.wait(0.5);bu()end)
 
@@ -76,24 +84,27 @@ if ok and rv then
         if not ok2 or not w then return end;WN=w;pcall(function()WI.TransparencyValue=0.22 end)
         local mt=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
         mt:Paragraph({Title="👁 【你的功能】"})
+        -- 💡 示例: 每个控件都带 Flag → 自动接入配置保存
         -- CT.YourToggle=mt:Toggle({Flag="YourFlag",Title="功能开关",Value=false,Callback=function(v)end})
-        mt:Divider();mt:Paragraph({Title="💡 带Flag自动保存"})
+        -- mt:Divider()
+        -- CT.YourSlider=mt:Slider({Flag="YourSlider",Title="参数设置",Step=10,Value={Min=0,Max=100,Default=50},Width=200,IsTextbox=true,Callback=function(v)end})
+        mt:Divider();mt:Paragraph({Title="💡 带Flag自动接入配置保存"})
         local ft=WN:Tab({Title="功能设置",Icon="solar:settings-bold"})
-        ft:Paragraph({Title="🔑 快捷键"});-- CT.YK=ft:Keybind({Flag="YK",Title="快捷键",Value="",Callback=function(k)KB.YK=k end})
+        ft:Paragraph({Title="🔑 快捷键 (无默认值,需自行绑定)"});-- CT.YK=ft:Keybind({Flag="YK",Title="快捷键",Value="",Callback=function(k)KB.YK=k end})
         local ut=WN:Tab({Title="UI设置",Icon="solar:monitor-bold"})
         ut:Paragraph({Title="⚙️ 界面"});CT.WK=ut:Keybind({Flag="WinKB",Title="窗口开关",Value="RightShift",Callback=function(k)KB.WK=k;if WN then pcall(function()WN:SetToggleKey(Enum.KeyCode[k])end)end end});CT.FBT=ut:Toggle({Flag="FB",Title="悬浮按钮",Value=true,Callback=function(v)if FB then FB.Enabled=v end end})
         ut:Divider();ut:Paragraph({Title="🌀 背景"});CT.PT=ut:Toggle({Flag="PT",Title="粒子背景",Value=true,Callback=function(v)S.Particles=v;if v then cp()else dp2()end end})
         ut:Divider();ut:Paragraph({Title="✨ 窗口"})
         CT.AT=ut:Toggle({Flag="AT",Title="毛玻璃",Value=true,Callback=function(v)pcall(function()WI:ToggleAcrylic(v)end)end})
         CT.TT=ut:Toggle({Flag="TT",Title="透明背景",Value=true,Callback=function(v)if v then pcall(function()WI.TransparencyValue=0.22;WI:ToggleAcrylic(true)end)else pcall(function()WI.TransparencyValue=0;WI:ToggleAcrylic(false)end)end end})
-        ut:Divider();ut:Paragraph({Title="🎨 主题"})
+        ut:Divider();ut:Paragraph({Title="🎨 主题 (16种内置)"})
         local allT={};pcall(function()allT=WI:GetThemes()end);local tn={};for n,_ in pairs(allT)do table.insert(tn,n)end;table.sort(tn)
         CT.TD=ut:Dropdown({Flag="TD",Title="选择主题",Values=tn,Value="Dark",Callback=function(sl)if sl then S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl);upc()end end})
         local st=WN:Tab({Title="信息统计",Icon="solar:chart-bold"})
         TE.GP=st:Paragraph({Title="📊 统计项 1: 0"});TE.BP=st:Paragraph({Title="📊 统计项 2: 0"});TE.SP=st:Paragraph({Title="📊 统计项 3: 0"})
         st:Divider();TE.SI=st:Input({Title="状态",Value="等待中...",Locked=true})
         local ct=WN:Tab({Title="配置管理",Icon="solar:diskette-bold"})
-        ct:Paragraph({Title="💾 配置管理"});local cni=ct:Input({Flag="CN",Title="配置名称",Value="default",Icon="solar:file-text-bold",Callback=function(v)CF=v end});ct:Space()
+        ct:Paragraph({Title="💾 配置 (保存/加载/删除)"});local cni=ct:Input({Flag="CN",Title="配置名称",Value="default",Icon="solar:file-text-bold",Callback=function(v)CF=v end});ct:Space()
         local CM=WN.ConfigManager;local AC={};pcall(function()AC=CM:AllConfigs()end);local DV=nil;pcall(function()for _,v in ipairs(AC)do if v=="default"then DV="default";break end end end)
         local ACD=ct:Dropdown({Title="已有配置",Values=AC,Value=DV,Callback=function(v)if v then CF=v;pcall(function()cni:Set(v)end)end end});ct:Space()
         ct:Button({Title="💾 保存",Icon="solar:check-circle-bold",Justify="Center",Color=Color3.fromHex("#305dff"),Callback=function()if not CM then return end;pcall(function()local c=CM:Config(CF);if c and c:Save()then WI:Notify({Title="✅ 已保存",Content="配置 '"..CF.."'",Duration=3,Icon="solar:check-circle-bold"});ACD:Refresh(CM:AllConfigs())end end)end});ct:Space()
@@ -101,14 +112,26 @@ if ok and rv then
         ct:Button({Title="🗑️ 删除",Icon="solar:trash-bin-trash-bold",Justify="Center",Color=Color3.fromHex("#ff3040"),Callback=function()if not CM then return end;pcall(function()local c=CM:Config(CF);if c and c:Delete()then WI:Notify({Title="🗑️ 已删除",Content="配置 '"..CF.."'",Duration=3,Icon="solar:trash-bin-trash-bold"});ACD:Refresh(CM:AllConfigs())end end)end})
         task.spawn(function()task.wait(1);pcall(function()if CM then local c=CM:CreateConfig("default",true)end end);cp()end)
         local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-        at:Paragraph({Title="WindUI模板 v3.5",Desc="粒子窗口内+透明+滚动条修复"})
+        at:Paragraph({Title="WindUI模板 v3.6",Desc="6Tab+粒子+主题+配置+手机适配"})
         at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
-        at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击👁"or"PC: RightShift"})
+        at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击👁"or"PC: RightShift打开菜单"})
         at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
+
+        -- ====== ⚠️ 常见易错点 ======
+        -- 1. Toggle:Set(bool) → 传布尔值,不是表格
+        -- 2. Input:Set(string) → 传字符串,不是表格
+        -- 3. Paragraph:SetTitle("new") → 只改标题,改不了Desc
+        -- 4. Keybind回调返回字符串,比较用 i.KeyCode.Name == KB.xxx
+        -- 5. Slider参数: Step=50, Value={Min=50,Max=1000,Default=500}
+        -- 6. Dropdown:Refresh(newValues) → 传新数组,不是单个值
+        -- 7. Button的Color用 Color3.fromHex("#3080ff")
+        -- 8. 悬浮按钮: 用协程无限重试等窗口出现
+        -- 9. 粒子: Parent到WindUI窗口Frame内才自动裁剪
+        -- 10. 全pcall包裹,永不崩溃
     end
-    print("[v3.5] 已加载")
+    print("[v3.6] 已加载")
 else
-    print("[v3.5] WindUI加载失败")
+    print("[v3.6] WindUI加载失败")
     local msg=Instance.new("Message");msg.Text="⚠️WindUI加载失败";msg.Parent=WS;task.delay(3,function()msg:Destroy()end)
 end
-print("[v3.5] 完成")
+print("[v3.6] 完成")
