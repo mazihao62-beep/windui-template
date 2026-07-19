@@ -1,5 +1,5 @@
 --[[
-    WindUI 通用脚本模板 v6.1.1
+    WindUI 通用脚本模板 v6.1.2
     纯UI框架 — 不含任何具体功能，只提供完整的UI骨架
     作者: b站英吉利超入_
     
@@ -88,6 +88,7 @@ local TE = {}
 local CF = "default"
 local PR = false
 local PS = {}
+local WI = nil   -- ⚠️ WindUI实例引用, 必须在函数定义之前声明!
 
 -- ============================================================================
 --  第四部分: 主题色映射 (不需要修改)
@@ -381,7 +382,7 @@ local function cw()
     --  Tab 6: 关于 (可以修改作者信息)
     -- ================================================================
     local at = WN:Tab({ Title = "关于", Icon = "solar:info-square-bold" })
-    at:Paragraph({ Title = "WindUI模板 v6.1.1", Desc = "纯UI框架" })
+    at:Paragraph({ Title = "WindUI模板 v6.1.2", Desc = "修复WI声明位置Bug" })
     at:Divider()
     at:Paragraph({ Title = "👤 作者", Desc = "b站英吉利超入_" })
     -- ⬆️ 【修改作者名】 ⬆️
@@ -389,14 +390,15 @@ local function cw()
     at:Paragraph({ Title = "💡 使用", Desc = IM and "手机: 点击悬浮按钮" or "PC: RightShift打开菜单" })
     at:Paragraph({ Title = "🧹 清理", Desc = "_G.CleanupTpl()" })
 
-    print("[v6.1.1] WindUI模板已加载")
+    print("[v6.1.2] WindUI模板已加载")
 end
 
 -- ============================================================================
 --  第八部分: 加载WindUI并显示弹窗 (3次重试 + 超时保护)
 -- ============================================================================
 
-local WI = nil
+-- 注意: WI已在顶部声明(local WI=nil), 底部不要重复local声明!
+-- 否则cw()捕获到的是之前的nil, 永远无法访问到加载后的WI!
 local retryCount = 0
 local maxRetries = 3
 local loaded = false
@@ -418,7 +420,7 @@ if loaded then
     pcall(function() WI:SetTheme("Dark") end)
     S.ParticleColor = gtc("Dark")
     WI:Popup({
-        Title = "WindUI模板 v6.1.1",
+        Title = "WindUI模板 v6.1.2",
         Icon = "solar:info-square-bold",
         Content = "✨ 6Tab标准UI框架\n🔘 WindUI内置OpenButton\n🌀 粒子背景(Scale坐标)\n🎨 16种主题\n💾 配置保存系统",
         Buttons = {
@@ -438,7 +440,7 @@ if loaded then
     })
     while not PP do task.wait(0.5) end
 else
-    print("[v6.1.1] WindUI加载失败(已重试" .. maxRetries .. "次)")
+    print("[v6.1.2] WindUI加载失败(已重试" .. maxRetries .. "次)")
     local msg = Instance.new("Message")
     msg.Text = "⚠️ WindUI加载失败(已重试" .. maxRetries .. "次)"
     msg.Parent = WS
@@ -475,3 +477,4 @@ end
 --  9. OnClose/OnOpen 在窗口关闭/打开时自动触发
 --  10. 粒子用 Scale 坐标(0~1)，永不卡边界
 --  11. 所有带 Flag 的控件都会自动接入配置保存
+--  12. ⚠️ local WI=nil 必须在所有函数定义之前声明, 否则函数捕获的是nil!
