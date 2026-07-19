@@ -1,11 +1,10 @@
 --[[
-    WindUI 通用脚本模板 v5.3
+    WindUI 通用脚本模板 v5.4
     作者: b站英吉利超入_
     功能: 6Tab标准UI + 粒子背景 + 主题切换 + 配置保存 + OpenButton悬浮按钮
-    修复: 粒子独立ScreenGui+DisplayOrder，彻底稳定
-    新增: 行李箱检测示例代码(Properties>Contraband)
+    修复: 粒子颜色动画循环每帧读取S.ParticleColor，不再依赖回调
+    新增: 游戏自带透视禁用示例(disableGameXray)
     使用: 搜索"【你的功能】"替换; _G.CleanupTpl()
-    注意: 修改disableFunc()以在窗口关闭时禁用你的功能
     
     ===== 易错点速查 =====
     1. Keybind回调返回字符串(如"G")，不是Enum.KeyCode
@@ -19,11 +18,34 @@
     9. OnClose/OnOpen回调在窗口关闭/打开时触发
     10. ToggleKey=Enum.KeyCode.RightShift 默认窗口开关快捷键
     11. 检测对象属性: 用rFind递归搜索 Configuration/Folder 内的嵌套值
-    12. 多个检测系统(人物+物品): 独立的ESP表(H={}, LG={}) + 独立Toggle + OnClose全部禁用
+    12. 多个检测系统(人物+物品): 独立的ESP表 + 独立Toggle + OnClose全部禁用
+    13. 粒子颜色: 动画循环每帧读S.ParticleColor，主题切换自动生效
+    14. 游戏自带透视: 开启ESP时disableGameXray()，关闭时enableGameXray()
 ]]
 local Players=game:GetService("Players");local UIS=game:GetService("UserInputService");local WS=game:GetService("Workspace");local CG=game:GetService("CoreGui")
 local IM=UIS.TouchEnabled and not UIS.KeyboardEnabled;if not IM then pcall(function()IM=UIS.TouchEnabled and not UIS.MouseEnabled end)end
 local TAG="TplESP_"
+
+-- 游戏自带透视控制(示例)
+local localPlayer=nil;pcall(function()localPlayer=Players.LocalPlayer end)
+local function disableGameXray()
+    if localPlayer then
+        local plg=localPlayer:FindFirstChild("PlayerGui")
+        if plg then local xv=plg:FindFirstChild("XrayVisual");if xv then xv.Enabled=false end end
+    end
+    for _,g in ipairs(CG:GetChildren())do
+        if g:IsA("ScreenGui")and g.Name:find("Xray")then g.Enabled=false end
+    end
+end
+local function enableGameXray()
+    if localPlayer then
+        local plg=localPlayer:FindFirstChild("PlayerGui")
+        if plg then local xv=plg:FindFirstChild("XrayVisual");if xv then xv.Enabled=true end end
+    end
+    for _,g in ipairs(CG:GetChildren())do
+        if g:IsA("ScreenGui")and g.Name:find("Xray")then g.Enabled=true end
+    end
+end
 
 local function clean()
     local c=0;pcall(function()
@@ -34,7 +56,6 @@ end
 clean()
 _G.CleanupTpl=function()clean()end
 
--- 递归搜索嵌套属性(Confuration/Folder内部)
 local function rFind(inst,name)
     local f=inst:FindFirstChild(name)
     if f then return f end
@@ -47,8 +68,6 @@ local function rFind(inst,name)
     return nil
 end
 
--- 示例: 行李箱分类器
--- 检测 Properties>Contraband BoolValue
 local function classifyLuggage(lug)
     if not lug then return"Suspicious"end
     local pr=lug:FindFirstChild("Properties")
@@ -61,7 +80,6 @@ local function classifyLuggage(lug)
     return"Suspicious"
 end
 
-local localPlayer=nil;pcall(function()localPlayer=Players.LocalPlayer end)
 local function tg(v)if v then pcall(function()v:SetAttribute(TAG,true)end)end;return v end
 local S={Particles=true,CurrentTheme="Dark",ParticleColor=Color3.fromRGB(80,170,255)}
 local TC={dark=Color3.fromRGB(80,170,255),light=Color3.fromRGB(60,130,210),rose=Color3.fromRGB(255,130,170),plant=Color3.fromRGB(70,210,130),ocean=Color3.fromRGB(60,190,240),sunset=Color3.fromRGB(255,160,70),midnight=Color3.fromRGB(130,100,240),forest=Color3.fromRGB(60,180,90),lavender=Color3.fromRGB(190,140,255),coral=Color3.fromRGB(255,140,90),mint=Color3.fromRGB(80,230,190),peanut=Color3.fromRGB(210,180,90),sky=Color3.fromRGB(100,190,255),blood=Color3.fromRGB(230,90,80),lemon=Color3.fromRGB(230,210,70),cyber=Color3.fromRGB(0,235,210)}
@@ -82,14 +100,14 @@ local function gtc(n)
     return Color3.fromRGB(80,170,255)
 end
 
-local WN=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={};local PH=nil
+local WN=nil;local PC=nil;local CT={};local KB={};local PP=false;local TE={};local CF="default";local PR=false;local PS={}
 
 -- 【重要】修改此函数以在窗口关闭时禁用你的功能
 local function disableFunc()
-    -- 示例: S.Enabled=false; refreshAllESP()
+    -- 示例: S.Enabled=false; enableGameXray(); refreshAllESP()
 end
 
--- 粒子: 独立ScreenGui + DisplayOrder 999999
+-- 粒子: 独立ScreenGui + 动画循环每帧读S.ParticleColor
 local function cp()
     if PC then pcall(function()local p=PC.Parent;if p then p:Destroy()end end);PC=nil end;PS={};PR=false
     if not S.Particles then return end
@@ -98,7 +116,7 @@ local function cp()
         local sg=Instance.new("ScreenGui");sg.Name="Tpl_Particles";sg.ResetOnSpawn=false
         sg.DisplayOrder=999999;sg.IgnoreGuiInset=true;sg.Parent=CG
         PC=Instance.new("Frame");PC.Size=UDim2.new(1,0,1,0);PC.BackgroundTransparency=1;PC.BorderSizePixel=0;PC.Active=false;PC.Parent=sg
-        local col=gtc(S.CurrentTheme);local vp=WS.CurrentCamera.ViewportSize;local w=vp.X;local h=vp.Y
+        local col=S.ParticleColor;local vp=WS.CurrentCamera.ViewportSize;local w=vp.X;local h=vp.Y
         if w<=0 or h<=0 then w=1280;h=720 end
         local mx,my=w*0.25,h*0.1;local MW,MH=w*0.75,h*0.85
         for i=1,50 do
@@ -116,12 +134,15 @@ local function cp()
                 pcall(function()
                     local cw=PC.AbsoluteSize.X;local ch=PC.AbsoluteSize.Y
                     if cw<=0 or ch<=0 then return end
+                    local curCol=S.ParticleColor
                     for _,p in ipairs(PS)do
                         if p.F and p.F.Parent then
                             local x=p.F.Position.X.Offset+p.Vx;local y=p.F.Position.Y.Offset+p.Vy;local sz=p.F.AbsoluteSize.X
                             if x+sz>=cw then x=cw-sz;p.Vx=-p.Vx*0.95 elseif x<0 then x=0;p.Vx=-p.Vx*0.95 end
                             if y+sz>=ch then y=ch-sz;p.Vy=-p.Vy*0.95 elseif y<0 then y=0;p.Vy=-p.Vy*0.95 end
-                            p.F.Position=UDim2.fromOffset(x,y);p.F.BackgroundTransparency=0.3+math.sin(t*0.8+p.Ph)*0.4
+                            p.F.Position=UDim2.fromOffset(x,y)
+                            if curCol~=p.F.BackgroundColor3 then p.F.BackgroundColor3=curCol end
+                            p.F.BackgroundTransparency=0.3+math.sin(t*0.8+p.Ph)*0.4
                             local bs=math.max(2,p.Sz+math.sin(t+p.Ph)*1.5);p.F.Size=UDim2.new(0,bs,0,bs)
                         end
                     end
@@ -130,11 +151,6 @@ local function cp()
             end
         end)
     end)
-end
-
-local function upc()
-    local c=gtc(S.CurrentTheme);if not c or #PS==0 then return end
-    pcall(function()for _,p in ipairs(PS)do if p.F and p.F.Parent then p.F.BackgroundColor3=c end end end)
 end
 
 local function dp2()
@@ -163,6 +179,7 @@ local function cw()
     mt:Divider()
     mt:Paragraph({Title="🧳 物品检测示例"})
     mt:Paragraph({Title="用rFind(inst,name)递归搜索嵌套属性"})
+    mt:Paragraph({Title="🚫 游戏透视: disableGameXray()/enableGameXray()"})
     
     local ft=WN:Tab({Title="功能设置",Icon="solar:settings-bold"})
     ft:Paragraph({Title="🔑 快捷键 (无默认值,需自行绑定)"})
@@ -171,7 +188,7 @@ local function cw()
     ut:Paragraph({Title="⚙️ 界面"})
     CT.WK=ut:Keybind({Flag="WinKB",Title="窗口开关",Value="RightShift",Callback=function(k)KB.WK=k;if WN then pcall(function()WN:SetToggleKey(Enum.KeyCode[k])end)end end})
     ut:Divider()
-    ut:Paragraph({Title="🌀 粒子背景"})
+    ut:Paragraph({Title="🌀 粒子背景 (颜色每帧自动跟踪S.ParticleColor)"})
     CT.PT=ut:Toggle({Flag="PT",Title="粒子背景",Value=true,Callback=function(v)S.Particles=v;if v then task.spawn(cp)else dp2()end end})
     ut:Divider()
     ut:Paragraph({Title="✨ 窗口效果"})
@@ -180,7 +197,11 @@ local function cw()
     ut:Divider()
     ut:Paragraph({Title="🎨 主题 (16种内置)"})
     local allT={};pcall(function()allT=WI:GetThemes()end);local tn={};for n,_ in pairs(allT)do table.insert(tn,n)end;table.sort(tn)
-    CT.TD=ut:Dropdown({Flag="TD",Title="选择主题",Values=tn,Value="Dark",Callback=function(sl)if sl then S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl);upc()end end})
+    CT.TD=ut:Dropdown({Flag="TD",Title="选择主题",Values=tn,Value="Dark",
+        Callback=function(sl)if sl and type(sl)=="string"then
+            S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl)
+            -- 粒子颜色在动画循环中每帧从S.ParticleColor读取，自动更新
+        end end})
     
     local st=WN:Tab({Title="信息统计",Icon="solar:chart-bold"})
     TE.GP=st:Paragraph({Title="📊 统计项 1: 0"});TE.BP=st:Paragraph({Title="📊 统计项 2: 0"});TE.SP=st:Paragraph({Title="📊 统计项 3: 0"})
@@ -198,19 +219,19 @@ local function cw()
     task.spawn(function()task.wait(1);pcall(function()if CM then CM:CreateConfig("default",true)end end);task.spawn(cp)end)
     
     local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-    at:Paragraph({Title="WindUI模板 v5.3",Desc="+行李箱检测示例+rFind递归搜索"})
+    at:Paragraph({Title="WindUI模板 v5.4",Desc="粒子颜色每帧自动跟踪+游戏透视禁用示例"})
     at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
     at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击悬浮按钮"or"PC: RightShift打开菜单"})
     at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
     
-    print("[v5.3] 已加载")
+    print("[v5.4] 已加载")
 end
 
 local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
-    WI:Popup({Title="WindUI模板 v5.3",Icon="solar:info-square-bold",
-        Content="✨ 6Tab标准UI+粒子+主题+配置保存\n🔘 WindUI内置OpenButton悬浮按钮\n🧳 新增rFind递归搜索+行李箱示例\n修改disableFunc()以在窗口关闭时禁用功能",
+    WI:Popup({Title="WindUI模板 v5.4",Icon="solar:info-square-bold",
+        Content="✨ 6Tab标准UI+粒子+主题+配置保存\n🔘 WindUI内置OpenButton悬浮按钮\n🚫 游戏透视禁用示例\n⚠️ 粒子颜色动画循环每帧自动跟踪",
         Buttons={{Title="取消",Callback=function()end,Variant="Tertiary"},
             {Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()
                 PP=true
@@ -219,6 +240,6 @@ if ok and rv then
             end,Variant="Primary"}}})
     while not PP do task.wait(0.5)end
 else
-    print("[v5.3] WindUI加载失败")
+    print("[v5.4] WindUI加载失败")
     local msg=Instance.new("Message");msg.Text="⚠️ WindUI加载失败";msg.Parent=WS;task.delay(3,function()msg:Destroy()end)
 end
