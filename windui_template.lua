@@ -1,15 +1,6 @@
 --[[
     WindUI 通用脚本模板 v3.4（开箱即用版）
     
-    v3.4 同步修复8个UI Bug（与v12.4一致）:
-    A: findWindowMainFrame() 双保险搜索窗口Frame
-    B: win.OnClose/OnOpen 改用轮询检测窗口可见性
-    C: 初始粒子颜色与Dark主题一致
-    D: 透明度改用 WindUI.TransparencyValue
-    E: PC端也创建半透明悬浮按钮（默认隐藏）
-    F: 清理旧WindUI实例
-    G: 移除无用变量
-    I: ESP扫描循环可停止
     
     作者: b站英吉利超入_
     WindUI加载: https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua
