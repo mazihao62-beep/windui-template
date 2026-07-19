@@ -1,10 +1,10 @@
 --[[
-    WindUI 通用脚本模板 v5.5
+    WindUI 通用脚本模板 v5.7
     作者: b站英吉利超入_
     功能: 6Tab标准UI + 粒子背景（Scale坐标） + 主题切换 + 配置保存 + OpenButton
-    修复: 粒子用Scale坐标永不卡边界 + updateParticleColors()回调直接刷新颜色
+    更新: 同步Highlight示例(红坏人/绿好人)+行李箱检测示例
     使用: 搜索"【你的功能】"替换; _G.CleanupTpl()
-    
+
     ===== 易错点速查 =====
     1. Keybind回调返回字符串(如"G")，不是Enum.KeyCode
     2. Toggle:Set(bool)直接传布尔值，不传表格
@@ -19,6 +19,7 @@
     11. 粒子用Scale坐标 0~1 范围，永不卡边界
     12. 主题切换时调用updateParticleColors()直接刷新粒子颜色
     13. 多个检测系统(人物+物品): 独立的ESP表 + 独立Toggle + OnClose全部禁用
+    14. Highlight+BillboardGui双重显示: Highlight全身高亮, Billboard头顶标签
 ]]
 local Players=game:GetService("Players");local UIS=game:GetService("UserInputService");local WS=game:GetService("Workspace");local CG=game:GetService("CoreGui")
 local IM=UIS.TouchEnabled and not UIS.KeyboardEnabled;if not IM then pcall(function()IM=UIS.TouchEnabled and not UIS.MouseEnabled end)end
@@ -156,17 +157,20 @@ local function cw()
     })end)
     if not ok2 or not w then return end
     WN=w
-    
+
     local mt=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
     mt:Paragraph({Title="👁 【你的功能】"})
+    mt:Paragraph({Title="💡 Highlight+BilboardGui双重显示示例:"})
+    mt:Paragraph({Title="🔴 坏人=红色Highlight | 🟢 好人=绿色Highlight"})
     mt:Paragraph({Title="💡 Toggle/Slider/Input/Dropdown 都支持Flag自动保存"})
     mt:Divider()
     mt:Paragraph({Title="🧳 物品检测示例"})
     mt:Paragraph({Title="用rFind(inst,name)递归搜索嵌套属性"})
-    
+    mt:Paragraph({Title="例: classifyLuggage()检查Properties>Contraband"})
+
     local ft=WN:Tab({Title="功能设置",Icon="solar:settings-bold"})
     ft:Paragraph({Title="🔑 快捷键 (无默认值,需自行绑定)"})
-    
+
     local ut=WN:Tab({Title="UI设置",Icon="solar:monitor-bold"})
     ut:Paragraph({Title="⚙️ 界面"})
     CT.WK=ut:Keybind({Flag="WinKB",Title="窗口开关",Value="RightShift",Callback=function(k)KB.WK=k;if WN then pcall(function()WN:SetToggleKey(Enum.KeyCode[k])end)end end})
@@ -185,11 +189,11 @@ local function cw()
             S.CurrentTheme=sl;pcall(function()WI:SetTheme(sl)end);S.ParticleColor=gtc(sl)
             updateParticleColors()
         end end})
-    
+
     local st=WN:Tab({Title="信息统计",Icon="solar:chart-bold"})
     TE.GP=st:Paragraph({Title="📊 统计项 1: 0"});TE.BP=st:Paragraph({Title="📊 统计项 2: 0"});TE.SP=st:Paragraph({Title="📊 统计项 3: 0"})
     st:Divider();TE.SI=st:Input({Title="状态",Value="等待中...",Locked=true})
-    
+
     local ct=WN:Tab({Title="配置管理",Icon="solar:diskette-bold"})
     ct:Paragraph({Title="💾 配置 (保存/加载/删除)"})
     local cni=ct:Input({Flag="CN",Title="配置名称",Value="default",Icon="solar:file-text-bold",Callback=function(v)CF=v end});ct:Space()
@@ -200,21 +204,21 @@ local function cw()
     ct:Button({Title="📂 加载",Icon="solar:refresh-circle-bold",Justify="Center",Color=Color3.fromHex("#10C550"),Callback=function()if not CM then return end;pcall(function()local c=CM:CreateConfig(CF,false);if c and c:Load()then WI:Notify({Title="✅ 已加载",Content="配置 '"..CF.."'",Duration=3,Icon="solar:refresh-circle-bold"})end end)end});ct:Space()
     ct:Button({Title="🗑️ 删除",Icon="solar:trash-bin-trash-bold",Justify="Center",Color=Color3.fromHex("#ff3040"),Callback=function()if not CM then return end;pcall(function()local c=CM:Config(CF);if c and c:Delete()then WI:Notify({Title="🗑️ 已删除",Content="配置 '"..CF.."'",Duration=3,Icon="solar:trash-bin-trash-bold"});ACD:Refresh(CM:AllConfigs())end end)end})
     task.spawn(function()task.wait(1);pcall(function()if CM then CM:CreateConfig("default",true)end end);task.spawn(cp)end)
-    
+
     local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-    at:Paragraph({Title="WindUI模板 v5.5",Desc="粒子Scale坐标+updateParticleColors()"})
+    at:Paragraph({Title="WindUI模板 v5.7",Desc="同步Highlight双重显示示例"})
     at:Divider();at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
     at:Divider();at:Paragraph({Title="💡 使用",Desc=IM and"手机: 点击悬浮按钮"or"PC: RightShift打开菜单"})
     at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
-    
-    print("[v5.5] 已加载")
+
+    print("[v5.7] 已加载")
 end
 
 local WI=nil;local ok,rv=pcall(function()return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()end)
 if ok and rv then
     WI=rv;pcall(function()WI:SetTheme("Dark")end);S.ParticleColor=gtc("Dark")
-    WI:Popup({Title="WindUI模板 v5.5",Icon="solar:info-square-bold",
-        Content="✨ 6Tab标准UI+粒子(Scale坐标)\n🔘 WindUI内置OpenButton悬浮按钮\n🌀 粒子永不卡边界\n🎨 主题切换updateParticleColors()直接刷新",
+    WI:Popup({Title="WindUI模板 v5.7",Icon="solar:info-square-bold",
+        Content="✨ 6Tab标准UI+粒子(Scale坐标)\n🔘 WindUI内置OpenButton悬浮按钮\n🌀 粒子永不卡边界\n🔴🟢 Highlight双重显示示例",
         Buttons={{Title="取消",Callback=function()end,Variant="Tertiary"},
             {Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()
                 PP=true
@@ -223,6 +227,6 @@ if ok and rv then
             end,Variant="Primary"}}})
     while not PP do task.wait(0.5)end
 else
-    print("[v5.5] WindUI加载失败")
+    print("[v5.7] WindUI加载失败")
     local msg=Instance.new("Message");msg.Text="⚠️ WindUI加载失败";msg.Parent=WS;task.delay(3,function()msg:Destroy()end)
 end
