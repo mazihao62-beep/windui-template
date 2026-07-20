@@ -1,5 +1,6 @@
--- WindUI 模板 v6.6
+-- WindUI 模板 v6.7
 -- 作者: b站英吉利超入_
+-- 🔧 v6.7: 透明改用 WI.TransparencyValue (对齐官方文档)
 -- 🔧 v6.6: 修复毛玻璃溢出(ClipsDescendants裁剪模糊层)
 -- 6Tab: 主控面板/功能设置/UI设置/信息统计/配置管理/关于
 -- 依赖: WindUI (Footagesus/WindUI)
@@ -189,8 +190,7 @@ OnOpen=function()if S.Particles then task.spawn(function()task.wait(0.5);cp()end
 end)
 if not ok2 or not w then return end
 WN=w
--- 🔑 v6.6: 修复毛玻璃溢出(裁剪模糊层使其不超出窗口边界)
-task.spawn(function()task.wait(0.8);pcall(function()if WN and WN.Parent then WN.Parent.ClipsDescendants=true;print("[v6.6] ✅ ClipsDescendants已应用(毛玻璃裁剪)")end end)end)
+task.spawn(function()task.wait(0.8);pcall(function()if WN and WN.Parent then WN.Parent.ClipsDescendants=true;print("[v6.7] ✅ ClipsDescendants已应用(毛玻璃裁剪)")end end)end)
 task.spawn(function()
 task.wait(0.5)
 pcall(function()WN:SetToggleKey(Enum.KeyCode.RightShift)end)
@@ -235,7 +235,7 @@ CT.TT=ut:Toggle({
 Flag="TT",
 Title="透明背景",
 Value=true,
-Callback=function(v)pcall(function()if WN then pcall(function()WN:ToggleTransparency(v)end)end end)end
+Callback=function(v)WI.TransparencyValue=v and 0.15 or 0 end
 })
 ut:Divider()
 ut:Paragraph({Title="🎨 主题"})
@@ -285,20 +285,20 @@ Callback=function()if not CM then return end;local c=CM:Config(CF)
 if c and c:Delete()then WI:Notify({Title="🗑️ 已删除",Content="配置 '"..CF.."'",Duration=3,Icon="solar:trash-bin-trash-bold"});ACD:Refresh(CM:AllConfigs())end end})
 task.spawn(function()task.wait(1);pcall(function()CM:CreateConfig("default",true)end);task.spawn(cp)end)
 local at=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
-at:Paragraph({Title="WindUI模板 v6.6",Desc="移除OpenButton防冲突 + 毛玻璃裁剪修复"})
+at:Paragraph({Title="WindUI模板 v6.7",Desc="毛玻璃裁剪 + 透明改用TransparencyValue"})
 at:Divider()
 at:Paragraph({Title="👤 作者",Desc="b站英吉利超入_"})
 at:Divider()
 at:Paragraph({Title="💡 使用",Desc=IM and"手机:点击悬浮按钮"or"PC:RightShift打开菜单"})
 at:Paragraph({Title="🧹 清理",Desc="_G.CleanupTpl()"})
-print("[v6.6] WindUI模板已加载")
+print("[v6.7] WindUI模板已加载")
 end
 pcall(function()WI:SetTheme("Dark")end)
 S.ParticleColor=gtc("Dark")
 WI:Popup({
-Title="WindUI模板 v6.6",
+Title="WindUI模板 v6.7",
 Icon="solar:info-square-bold",
-Content="✨ 6Tab标准UI框架\n🌀 粒子背景\n🎨 16种主题\n💾 配置保存\n✂️ 毛玻璃裁剪(v6.6新增)",
+Content="✨ 6Tab标准UI框架\n🌀 粒子背景\n🎨 16种主题\n💾 配置保存\n✂️ 毛玻璃裁剪\n🔧 透明修复(v6.7)",
 Buttons={
 {Title="取消",Callback=function()end,Variant="Tertiary"},
 {Title="确认加载",Icon="solar:arrow-right-bold",Callback=function()
