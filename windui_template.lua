@@ -196,6 +196,18 @@ task.wait(0.5)
 pcall(function()WN:SetToggleKey(Enum.KeyCode.RightShift)end)
 end)
 makeMobileBtn()
+-- 手动快捷键监听（兜底，WindUI内部ToggleKey可能失效）
+task.spawn(function()
+task.wait(1.5)
+U.InputBegan:Connect(function(input,gpe)
+if gpe then return end
+if input.UserInputType~=Enum.UserInputType.Keyboard then return end
+local kn=input.KeyCode and input.KeyCode.Name or ""
+if kn==KB.WK and WN then
+pcall(function()WN:Toggle()end)
+end
+end)
+end)
 local mt=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
 local ft=WN:Tab({Title="功能设置",Icon="solar:settings-bold"})
 local ut=WN:Tab({Title="UI设置",Icon="solar:monitor-bold"})
